@@ -1,0 +1,7 @@
+{
+    "name": "basic",
+    "description": "A basic Pipecat application with a simple pipeline",
+    "version": "0.1.0",
+    "author": "Pipecat Team",
+    "tags": ["beginner", "simple", "basic"]
+}

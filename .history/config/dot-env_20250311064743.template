@@ -1,0 +1,11 @@
+# API Keys
+OPENAI_API_KEY=your_openai_api_key
+ANTHROPIC_API_KEY=your_anthropic_api_key
+GOOGLE_API_KEY=your_google_api_key
+ELEVENLABS_API_KEY=your_elevenlabs_api_key
+DEEPGRAM_API_KEY=your_deepgram_api_key
+
+# Service Configuration
+PIPECAT_LOG_LEVEL=INFO
+PIPECAT_DEBUG=false
+PIPECAT_CACHE_DIR=/tmp/pipecat_cache

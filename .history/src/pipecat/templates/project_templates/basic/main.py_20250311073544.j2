@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+"""
+{{ project_name }} - A Pipecat Application
+
+Created by: {{ author }}
+"""
+import os
+import sys
+from pathlib import Path
+import asyncio
+import logging
+
+# Add the project directory to Python path
+project_dir = Path(__file__).parent.absolute()
+sys.path.insert(0, str(project_dir))
+
+from pipecat.api import Pipeline, PipelineTask
+from pipecat.config import default_config
+from pipecat.frames import TextFrame, SystemFrame
+{% if use_tts %}
+from pipecat.services.tts import ElevenLabsTTSService
+{% endif %}
+{% if use_stt %}
+from pipecat.services.stt import DeepgramSTTService
+{% endif %}
+from pipecat.services.llm import OpenAILLMService
+
+
+class {{ project_slug.title() }}:
+    """{{ project_name }} main application class."""
+    
+    def __init__(self):
+        """Initialize the application."""
+        self.logger = logging.getLogger("{{ project_slug }}")
+        self.setup_logging()
+        self.setup_pipeline()
+    
+    def setup_logging(self):
+        """Configure logging."""
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            handlers=[logging.StreamHandler()]
+        )
+    
+    def setup_pipeline(self):
+        """Set up the processing pipeline."""
+        self.pipeline = Pipeline([
+            {% if use_stt %}
+            DeepgramSTTService(),
+            {% endif %}
+            OpenAILLMService(model="gpt-4"),
+            {% if use_tts %}
+            ElevenLabsTTSService(voice_id="your-voice-id"),
+            {% endif %}
+        ])
+        
+        self.logger.info("Pipeline initialized")
+    
+    async def run(self):
+        """Run the application."""
+        self.logger.info("Starting {{ project_name }}")
+        
+        # Example: Process a text input
+        await self.pipeline.process_async(TextFrame(
+            text="Hello, tell me about Pipecat!",
+            source="user"
+        ))
+        
+        # Wait for all frames to be processed
+        await self.pipeline.wait_for_completion()
+        
+        self.logger.info("Application completed")
+
+
+async def main():
+    """Application entry point."""
+    app = {{ project_slug.title() }}()
+    await app.run()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

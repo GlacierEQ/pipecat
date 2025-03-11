@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pipecat
+  labels:
+    app: pipecat
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: pipecat
+  template:
+    metadata:
+      labels:
+        app: pipecat
+    spec:
+      containers:
+      - name: pipecat
+        image: pipecat:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+          name: api
+        - containerPort: 8080
+          name: dashboard
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+          limits:
+            cpu: "1"
+            memory: "1Gi"
+        env:
+        - name: PYTHONPATH
+          value: "/app/src"
+        - name: PIPECAT_CACHE_DIR
+          value: "/app/cache"
+        - name: PIPECAT_LOG_LEVEL
+          value: "INFO"
+        volumeMounts:
+        - name: cache-volume
+          mountPath: /app/cache
+        - name: config-volume
+          mountPath: /app/config
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: api
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /readiness
+            port: api
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      volumes:
+      - name: cache-volume
+        persistentVolumeClaim:
+          claimName: pipecat-cache-pvc
+      - name: config-volume
+        configMap:
+          name: pipecat-config

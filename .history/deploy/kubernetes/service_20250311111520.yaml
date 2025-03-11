@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pipecat
+  labels:
+    app: pipecat
+spec:
+  selector:
+    app: pipecat
+  ports:
+  - port: 8000
+    name: api
+    targetPort: api
+  - port: 8080
+    name: dashboard
+    targetPort: dashboard
+  type: ClusterIP

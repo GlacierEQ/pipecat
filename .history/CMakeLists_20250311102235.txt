@@ -1,0 +1,56 @@
+cmake_minimum_required(VERSION 3.15)
+project(pipecat 
+    VERSION 0.2.0
+    DESCRIPTION "Real-time AI pipelines for complex AI communications stacks"
+    LANGUAGES C CXX Python)
+
+# Set C++ standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Find Python interpreter and development packages
+find_package(Python 3.9 REQUIRED COMPONENTS Interpreter Development)
+find_package(pybind11 CONFIG REQUIRED)
+
+# Enable Ninja build if available
+find_program(NINJA_EXECUTABLE ninja)
+if(NINJA_EXECUTABLE)
+    set(CMAKE_GENERATOR "Ninja" CACHE INTERNAL "" FORCE)
+    message(STATUS "Using Ninja build generator")
+endif()
+
+# Add performance optimization flags
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    add_compile_options(-O3 -march=native)
+elseif(MSVC)
+    add_compile_options(/O2 /arch:AVX2)
+endif()
+
+# Define extension modules directory
+set(EXTENSIONS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/pipecat/extensions")
+
+# Add extension modules
+add_subdirectory(${EXTENSIONS_DIR}/optimized_processing)
+add_subdirectory(${EXTENSIONS_DIR}/audio_processing)
+
+# Testing (optional)
+option(BUILD_TESTING "Build tests" ON)
+if(BUILD_TESTING)
+    enable_testing()
+    add_subdirectory(tests/cpp)
+endif()
+
+# Install targets
+install(
+    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/src/pipecat"
+    DESTINATION "${Python_SITEPACKAGES_DIR}"
+    FILES_MATCHING
+    PATTERN "*.py"
+    PATTERN "__pycache__" EXCLUDE
+    PATTERN "*.egg-info" EXCLUDE
+)
+
+# Print build configuration summary
+message(STATUS "Python: ${Python_EXECUTABLE}")
+message(STATUS "Python include: ${Python_INCLUDE_DIRS}")
+message(STATUS "Python site packages: ${Python_SITEPACKAGES_DIR}")

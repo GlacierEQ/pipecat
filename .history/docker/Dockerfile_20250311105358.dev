@@ -1,0 +1,85 @@
+FROM python:3.11-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/workspaces/pipecat/src \
+    PIPECAT_CACHE_DIR=/app/cache \
+    CMAKE_GENERATOR=Ninja \
+    CMAKE_BUILD_PARALLEL_LEVEL=0 \
+    CCACHE_DIR=/home/vscode/.ccache \
+    CCACHE_MAXSIZE=10G \
+    NINJA_STATUS="[%f/%t] (%e) "
+
+# Install system dependencies and development tools with optimal settings
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    ninja-build \
+    ccache \
+    curl \
+    git \
+    openssh-client \
+    vim \
+    libfftw3-dev \
+    python3-dev \
+    clang \
+    clang-tools \
+    libomp-dev \
+    lld \
+    gdb \
+    valgrind \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create cache directories
+RUN mkdir -p /app/cache && chmod 777 /app/cache
+RUN mkdir -p /home/vscode/.ccache && chmod 777 /home/vscode/.ccache
+
+# Create non-root user
+ARG USERNAME=vscode
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
+
+RUN groupadd --gid $USER_GID $USERNAME \
+    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+    && apt-get update \
+    && apt-get install -y sudo \
+    && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
+    && chmod 0440 /etc/sudoers.d/$USERNAME
+
+# Install Python tools for development with optimal settings
+RUN pip install --no-cache-dir \
+    black \
+    isort \
+    ruff \
+    pytest \
+    pytest-cov \
+    mypy \
+    pip-tools \
+    twine \
+    build \
+    ipython \
+    debugpy \
+    cmake \
+    scikit-build \
+    pybind11 \
+    numpy \
+    ninja \
+    cython \
+    wheel
+
+# Configure ccache for better performance
+RUN ccache --max-size=10G \
+    && ccache --set-config=sloppiness=pch_defines,time_macros \
+    && ccache --set-config=compression=true \
+    && ccache --set-config=compression_level=1
+
+# Set working directory
+WORKDIR /workspaces/pipecat
+
+# Switch to non-root user
+USER $USERNAME
+
+# Setup remote debugging capability
+EXPOSE 5678

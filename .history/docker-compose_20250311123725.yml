@@ -1,0 +1,61 @@
+version: '3'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        BUILD_TYPE: Release
+    image: pipecat:latest
+    volumes:
+      # Mount a persistent volume for cache data
+      - pipecat_cache:/app/cache
+      # Optional: Mount your config directory
+      - ./config:/app/config:ro
+    environment:
+      - PIPECAT_CACHE_DIR=/app/cache
+      - PIPECAT_ENV=production
+      - PYTHONOPTIMIZE=2
+    ports:
+      - "8000:8000"  # For API server
+      - "8080:8080"  # For dashboard
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
+          memory: 4G
+        reservations:
+          cpus: "1.0"
+          memory: 1G
+
+  # Optional development container
+  dev:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dev
+    image: pipecat-dev:latest
+    volumes:
+      - .:/workspaces/pipecat
+      - pipecat_dev_cache:/app/cache
+      - pipecat_ccache:/home/vscode/.ccache
+    environment:
+      - PIPECAT_CACHE_DIR=/app/cache
+      - PIPECAT_ENV=development
+      - PYTHONPATH=/workspaces/pipecat/src
+    ports:
+      - "8001:8000"  # For API server
+      - "8081:8080"  # For dashboard
+      - "5678:5678"  # For remote debugging
+    command: sleep infinity
+
+volumes:
+  pipecat_cache:  # Persistent cache for production
+  pipecat_dev_cache:  # Persistent cache for development
+  pipecat_ccache:  # Cache for C++ compilation

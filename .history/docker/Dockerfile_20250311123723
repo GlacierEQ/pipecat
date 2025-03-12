@@ -1,14 +1,15 @@
-# Multi-stage optimized build for Pipecat
-# Stage 1: Build environment
-FROM python:3.11-slim as builder
+FROM python:3.11-slim as base
 
-# Set build arguments
+# Set build arguments and environment variables
 ARG BUILD_TYPE=Release
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app/src \
+    PIPECAT_CACHE_DIR=/app/cache \
     CMAKE_BUILD_TYPE=${BUILD_TYPE} \
     CMAKE_GENERATOR=Ninja \
-    CMAKE_BUILD_PARALLEL_LEVEL=12
+    CMAKE_BUILD_PARALLEL_LEVEL=12 \
+    NINJA_STATUS="[%p|%f/%t] [%es] "
 
 # Install system dependencies with optimized cache
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -22,7 +23,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     clang \
     lld \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /app/cache && chmod 777 /app/cache
 
 # Configure ccache for better performance
 RUN ccache --max-size=5G \
@@ -30,25 +32,26 @@ RUN ccache --max-size=5G \
     && ccache --set-config=compression=true \
     && ccache --set-config=compression_level=6
 
-# Create working directory 
-WORKDIR /build
+# Create working directory
+WORKDIR /app
 
-# Copy only requirements for better layer caching
-COPY requirements.txt pyproject.toml ./
+# Copy only requirements files first for better caching
+COPY requirements.txt /app/
+COPY pyproject.toml /app/
 
-# Install Python build dependencies
+# Install Python dependencies
 RUN pip install --no-cache-dir -U pip setuptools wheel && \
     pip install --no-cache-dir ninja pybind11 scikit-build numpy && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy the source code 
-COPY . .
+# Copy the rest of the application
+COPY . /app/
 
 # Build C++ extensions with optimized configuration
 RUN mkdir -p build/Release && \
     cd build/Release && \
     cmake ../.. -G Ninja \
-      -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+      -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
       -DCMAKE_C_COMPILER_LAUNCHER=ccache \
       -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
@@ -56,59 +59,29 @@ RUN mkdir -p build/Release && \
       -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
       -DBUILD_TESTING=OFF && \
     cmake --build . --parallel 12 && \
-    cmake --install . --prefix /build/install
+    cmake --install . --prefix /app/install && \
+    # Copy built extensions to source tree
+    cp -r /app/install/pipecat/* /app/src/pipecat/ && \
+    # Clean up build files to reduce image size
+    ccache -c && \
+    rm -rf /app/build
 
-# Build wheel package
-RUN cp -r /build/install/pipecat/* /build/src/pipecat/ && \
-    pip wheel -w /dist .
+# Install the package in development mode
+RUN pip install -e .
 
-# Stage 2: Runtime environment
-FROM python:3.11-slim
-
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app/src \
-    PIPECAT_CACHE_DIR=/app/cache \
-    PIPECAT_ENV=production \
-    PYTHONOPTIMIZE=2
-
-# Install runtime dependencies only
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libfftw3-3 \
-    curl \
-    ca-certificates \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && mkdir -p /app/cache \
-    && chmod 777 /app/cache
-
-# Create non-root user
+# Create a non-root user to run the application
 RUN groupadd -r pipecat && \
     useradd -r -g pipecat pipecat && \
     chown -R pipecat:pipecat /app/cache
 
-# Copy built wheel and install it
-COPY --from=builder /dist/*.whl /tmp/
-RUN pip install --no-cache-dir /tmp/*.whl && rm /tmp/*.whl
-
-# Copy entrypoint script
-COPY docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
 # Use the non-root user
 USER pipecat
-WORKDIR /app
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8080/health || exit 1
 
 # Expose the necessary ports
 EXPOSE 8000 8080
 
 # Set the entry point
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["python", "-m", "pipecat.cli"]
 
 # Default command
 CMD ["dashboard", "--host", "0.0.0.0", "--port", "8080"]

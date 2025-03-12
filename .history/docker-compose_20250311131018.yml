@@ -75,33 +75,6 @@ services:
     depends_on:
       - prometheus
 
-  # NGINX load balancer
-  nginx:
-    image: nginx:latest
-    container_name: pipecat-nginx
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
-    ports:
-      - "80:80"
-      - "443:443"
-    depends_on:
-      - app
-      - generate-ssl-certs
-    restart: always
-
-  # Generate SSL certificates
-  generate-ssl-certs:
-    image: alpine/openssl
-    container_name: pipecat-ssl-generator
-    volumes:
-      - ./nginx/ssl:/app/ssl
-    command: sh -c "openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /app/ssl/pipecat.example.com.key -out /app/ssl/pipecat.example.com.crt -subj '/CN=pipecat.example.com' && \
-                    openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /app/ssl/dashboard.pipecat.example.com.key -out /app/ssl/dashboard.pipecat.example.com.crt -subj '/CN=dashboard.pipecat.example.com' && \
-                    openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /app/ssl/api.pipecat.example.com.key -out /app/ssl/api.pipecat.example.com.crt -subj '/CN=api.pipecat.example.com'"
-    restart: "no"
-
   # Development container - only started with docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
   dev:
     profiles: ["dev"]

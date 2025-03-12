@@ -1,0 +1,65 @@
+# Production override for docker-compose.yml
+version: '3.8'
+
+services:
+  app:
+    restart: always
+    environment:
+      - PIPECAT_ENV=production
+      - PIPECAT_LOG_LEVEL=INFO
+      - PYTHONOPTIMIZE=2
+    deploy:
+      mode: replicated
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+        failure_action: rollback
+      restart_policy:
+        condition: any
+        delay: 5s
+        window: 120s
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200m"
+        max-file: "5"
+
+  # Add Redis cache for production
+  redis:
+    image: redis:alpine
+    container_name: pipecat-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-pipecat}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Add NGINX load balancer
+  nginx:
+    image: nginx:latest
+    container_name: pipecat-nginx
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - app
+    restart: always
+
+volumes:
+  redis_data:

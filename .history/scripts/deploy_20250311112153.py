@@ -565,9 +565,12 @@ def apply_deployment(config: DeploymentConfig, output_dir: Path) -> bool:
             return False
         
         try:
-            subprocess.run(
-                ["docker-compose", "-f", str(compose_file), "up", "-d"],
-                check=True
+subprocess.run(
+    ["docker-compose", "-f", str(compose_file), "up", "-d"],
+    check=True,
+    capture_output=True,
+    text=True
+)
             )
             print(f"Successfully deployed {config.name} using Docker Compose")
             return True

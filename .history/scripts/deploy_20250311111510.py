@@ -487,7 +487,7 @@ def generate_cloud_formation(config: DeploymentConfig, output_dir: Path) -> Path
                     "NetworkMode": "awsvpc",
                     "ExecutionRoleArn": {"Fn::GetAtt": ["PipecatTaskExecutionRole", "Arn"]},
                     "Cpu": str(int(float(config.resources.cpu) * 1024)),  # Convert CPU units
-                    "Memory": str(int(config.resources.memory.replace("Gi", "")) * 1024),  # Convert to MB
+"Memory": str(int(config.resources.memory[:-2]) * 1024) if config.resources.memory.endswith("Gi") else config.resources.memory,
                     "ContainerDefinitions": [
                         {
                             "Name": config.name,

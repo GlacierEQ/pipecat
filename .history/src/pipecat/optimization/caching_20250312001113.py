@@ -45,13 +45,12 @@ class ResultCache(ABC, Generic[T]):
     
     def get_or_compute(self, key: str, compute_fn: Callable[[], T], ttl: Optional[int] = None) -> T:
         """Get from cache or compute and cache the result."""
-if self.has(key):
-    return self.get(key)
-with threading.Lock():  # Use a consistent lock to synchronize compute_fn
-    if not self.has(key):
+        if self.has(key):
+            return self.get(key)
+        
         value = compute_fn()
         self.set(key, value, ttl)
-return self.get(key)
+        return value
 
 
 class MemoryCache(ResultCache[T]):
@@ -150,8 +149,8 @@ class PersistentCache(ResultCache[T]):
                 os.path.join(tempfile.gettempdir(), "pipecat_cache")
             )
         
-        self.cache_dir = Path(cache_dir)
-        self.max_size_bytes = max_size_mb * 1024 * 1024
+self.cache_dir = Path(cache_dir)
+self.cache_dir.mkdir(parents=True, exist_ok=True)
         self._metadata_path = self.cache_dir / "metadata.json"
         self._lock = threading.RLock()
         

@@ -35,7 +35,7 @@ clean:
 
 # Run the tests
 test: build
-	@pytest --cov=src --cov-report=xml --cov-report=term --asyncio-mode=strict
+	@pytest --cov=src --cov-report=xml --cov-report=term
 	@cd $(BUILD_DIR) && ctest --output-on-failure --parallel $(CMAKE_BUILD_PARALLEL_LEVEL)
 
 # Install the project
@@ -72,4 +72,5 @@ release: format lint test
 
 # Run pre-commit hooks
 precommit:
+
 	@pre-commit run --all-files

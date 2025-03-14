@@ -172,7 +172,24 @@ def generate_docker_compose(config: DeploymentConfig, output_dir: Path) -> Path:
                 },
                 "image": f"pipecat:{config.version}",
                 "restart": "always",
-                "ports": [f"{port}:{port}" for port in config.ports.values()],
+if "api" not in config.ports:
+    raise ValueError("Missing 'api' port configuration")
+compose_config = {
+    "version": "3",
+    "services": {
+        "pipecat": {
+            "build": {
+                "context": ".",
+                "dockerfile": "docker/Dockerfile"
+            },
+            "image": f"pipecat:{config.version}",
+            "restart": "always",
+            "ports": [f"{port}:{port}" for port in config.ports.values()],
+            ...
+        }
+    },
+    ...
+}
                 "volumes": [
                     "./data:/app/data",
                     "./cache:/app/cache"

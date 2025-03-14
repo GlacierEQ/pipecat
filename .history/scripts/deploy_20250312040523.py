@@ -565,14 +565,12 @@ def apply_deployment(config: DeploymentConfig, output_dir: Path) -> bool:
             return False
         
         try:
-try:
-    subprocess.run(
-        ["docker-compose", "-f", str(compose_file), "up", "-d"],
-        check=True,
-        capture_output=True,
-        text=True
-    )
-    print(f"Successfully deployed {config.name} using Docker Compose")
+subprocess.run(
+            ["docker-compose", "-f", str(compose_file), "up", "-d"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True
+        )
             print(f"Successfully deployed {config.name} using Docker Compose")
             return True
         except subprocess.CalledProcessError as e:
@@ -672,4 +670,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

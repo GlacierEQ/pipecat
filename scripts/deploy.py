@@ -11,8 +11,8 @@ import subprocess
 import time
 import json
 from pathlib import Path
-from typing import Optional, Dict, Any, List
-import shutil
+from typing import Dict
+import yaml
 
 # Ensure pipecat is in the path
 script_dir = Path(__file__).parent
@@ -190,6 +190,7 @@ def generate_docker_compose(config: DeploymentConfig, output_dir: Path) -> Path:
     if config.health_check_path:
         compose_config["services"]["pipecat"]["healthcheck"] = {
             "test": f"curl --fail http://localhost:{config.ports.get('api', 8000)}{config.health_check_path} || exit 1",
+            "interval": "30s",
             "interval": "30s",
             "timeout": "10s",
             "retries": 3
@@ -565,10 +566,12 @@ def apply_deployment(config: DeploymentConfig, output_dir: Path) -> bool:
             return False
         
         try:
-            subprocess.run(
-                ["docker-compose", "-f", str(compose_file), "up", "-d"],
-                check=True
-            )
+subprocess.run(
+            ["docker-compose", "-f", str(compose_file), "up", "-d"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True
+        )
             print(f"Successfully deployed {config.name} using Docker Compose")
             return True
         except subprocess.CalledProcessError as e:

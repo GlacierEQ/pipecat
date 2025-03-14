@@ -43,15 +43,16 @@ class ResultCache(ABC, Generic[T]):
         """Clear the entire cache."""
         pass
     
-    def get_or_compute(self, key: str, compute_fn: Callable[[], T], ttl: Optional[int] = None) -> T:
-        """Get from cache or compute and cache the result."""
-if self.has(key):
-    return self.get(key)
-with threading.Lock():  # Use a consistent lock to synchronize compute_fn
-    if not self.has(key):
-        value = compute_fn()
-        self.set(key, value, ttl)
-return self.get(key)
+def get_or_compute(self, key: str, compute_fn: Callable[[], T], ttl: Optional[int] = None) -> T:
+    """Get from cache or compute and cache the result."""
+    if self.has(key):
+        return self.get(key)
+    with self._lock:  # Use the instance's lock for synchronization
+        if not self.has(key):
+            value = compute_fn()
+            self.set(key, value, ttl)
+            return value
+        return self.get(key)
 
 
 class MemoryCache(ResultCache[T]):

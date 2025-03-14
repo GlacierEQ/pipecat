@@ -38,8 +38,7 @@ public:
     }
 
     // Push a new frame to the call stack
-    void push_frame(const std::string& function, const std::string& module, int line, double time) {
-        call_stack.push({function, module, line, time});
+    void push_frame(const std::string& function, const std::string& module, int line, double time) const {        call_stack.push({function, module, line, time});
     }
     
     // Pop the top frame and return its info

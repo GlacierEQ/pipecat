@@ -3,3 +3,4 @@ fastapi[all]
 uvicorn
 pipecat-ai[daily,openai,silero,elevenlabs,canonical]
 
+starlette>=0.47.2 # not directly required, pinned by Snyk to avoid a vulnerability

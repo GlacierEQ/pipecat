@@ -6,3 +6,4 @@ pipecat[whisper, openai]
 textual==1.0.0
 pydantic-settings==2.7.1
 pyaudio==0.2.14
+setuptools>=78.1.1 # not directly required, pinned by Snyk to avoid a vulnerability

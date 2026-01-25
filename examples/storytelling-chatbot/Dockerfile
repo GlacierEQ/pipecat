@@ -1,4 +1,4 @@
-FROM python:3.11-slim-bookworm
+FROM python:3.14.0rc3-slim-bookworm
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG USE_PERSISTENT_DATA

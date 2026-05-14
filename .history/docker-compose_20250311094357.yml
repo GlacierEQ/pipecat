@@ -1,0 +1,21 @@
+version: '3'
+
+services:
+  pipecat:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    volumes:
+      # Mount a persistent volume for cache data
+      - pipecat_cache:/app/cache
+      # Optional: Mount your .env file for credentials
+      - ./.env:/app/.env
+    environment:
+      - PIPECAT_CACHE_DIR=/app/cache
+    ports:
+      - "8000:8000"  # For API server
+      - "8080:8080"  # For dashboard
+
+volumes:
+  pipecat_cache:
+    # Named volume for persisting cache across restarts

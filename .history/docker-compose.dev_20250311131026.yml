@@ -1,0 +1,57 @@
+# Development override for docker-compose.yml
+version: '3.8'
+
+services:
+  # Override app service for development
+  app:
+    build:
+      dockerfile: docker/Dockerfile.dev
+      args:
+        BUILD_TYPE: Debug
+    image: pipecat:dev
+    volumes:
+      - .:/workspaces/pipecat
+      - pipecat_dev_cache:/app/cache
+      - pipecat_ccache:/home/vscode/.ccache
+    environment:
+      - PIPECAT_ENV=development
+      - PIPECAT_DEBUG=true
+      - PYTHONPATH=/workspaces/pipecat/src
+      - PIPECAT_CACHE_DIR=/app/cache
+      - CCACHE_DIR=/home/vscode/.ccache
+    ports:
+      - "8000:8000"
+      - "8080:8080"
+      - "5678:5678"  # For remote debugging
+    command: ["dashboard", "--host", "0.0.0.0", "--port", "8080", "--debug"]
+
+  # Start development tools
+  dev-tools:
+    profiles: ["dev-tools"]
+    image: pipecat-dev:latest
+    container_name: pipecat-dev-tools
+    volumes:
+      - .:/workspaces/pipecat
+      - pipecat_dev_cache:/app/cache
+      - pipecat_ccache:/home/vscode/.ccache
+    environment:
+      - PIPECAT_ENV=development
+      - PYTHONPATH=/workspaces/pipecat/src
+    command: python -m pipecat.cli dev-tools
+    ports:
+      - "8090:8090"  # Dev tools server
+
+  # Jupyter notebook server for experimentation
+  jupyter:
+    profiles: ["jupyter"]
+    image: pipecat-dev:latest
+    container_name: pipecat-jupyter
+    volumes:
+      - .:/workspaces/pipecat
+      - pipecat_dev_cache:/app/cache
+    environment:
+      - PYTHONPATH=/workspaces/pipecat/src
+      - PIPECAT_ENV=development
+    ports:
+      - "8888:8888"
+    command: jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password=''

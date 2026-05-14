@@ -1,0 +1,84 @@
+# Development override for docker-compose.yml
+version: '3.8'
+
+services:
+  # Override app service for development
+  app:
+    build:
+      dockerfile: docker/Dockerfile.dev
+      args:
+        BUILD_TYPE: Debug
+    image: pipecat:dev
+    volumes:
+      - .:/workspaces/pipecat
+      - pipecat_dev_cache:/app/cache
+      - pipecat_ccache:/home/vscode/.ccache
+    environment:
+      - PIPECAT_ENV=development
+      - PIPECAT_DEBUG=true
+      - PYTHONPATH=/workspaces/pipecat/src
+      - PIPECAT_CACHE_DIR=/app/cache
+      - CCACHE_DIR=/home/vscode/.ccache
+    ports:
+      - "8000:8000"
+      - "8080:8080"
+      - "5678:5678"  # For remote debugging
+    command: ["dashboard", "--host", "0.0.0.0", "--port", "8080", "--debug"]
+
+  # Start development tools
+  dev-tools:
+    profiles: ["dev-tools"]
+    image: pipecat-dev:latest
+    container_name: pipecat-dev-tools
+    volumes:
+      - .:/workspaces/pipecat
+      - pipecat_dev_cache:/app/cache
+      - pipecat_ccache:/home/vscode/.ccache
+    environment:
+      - PIPECAT_ENV=development
+      - PYTHONPATH=/workspaces/pipecat/src
+    command: python -m pipecat.cli dev-tools
+    ports:
+      - "8090:8090"  # Dev tools server
+
+  # Jupyter notebook server for experimentation
+  jupyter:
+    profiles: ["jupyter"]
+    image: pipecat-dev:latest
+    container_name: pipecat-jupyter
+    volumes:
+      - .:/workspaces/pipecat
+      - pipecat_dev_cache:/app/cache
+    environment:
+      - PYTHONPATH=/workspaces/pipecat/src
+      - PIPECAT_ENV=development
+    ports:
+      - "8888:8888"
+    command: jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password=''
+
+  # NGINX load balancer
+  nginx:
+    image: nginx:latest
+    container_name: pipecat-nginx
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - app
+      - generate-ssl-certs
+    restart: always
+
+  # Generate SSL certificates
+  generate-ssl-certs:
+    image: alpine/openssl
+    container_name: pipecat-ssl-generator
+    volumes:
+      - ./nginx/ssl:/app/ssl
+    command: sh -c "openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /app/ssl/pipecat.example.com.key -out /app/ssl/pipecat.example.com.crt -subj '/CN=pipecat.example.com' && \
+                    openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /app/ssl/dashboard.pipecat.example.com.key -out /app/ssl/dashboard.pipecat.example.com.crt -subj '/CN=dashboard.pipecat.example.com' && \
+                    openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /app/ssl/api.pipecat.example.com.key -out /app/ssl/api.pipecat.example.com.crt -subj '/CN=api.pipecat.example.com'"
+    restart: "no"

@@ -1,0 +1,199 @@
+cmake_minimum_required(VERSION 3.15)
+project(pipecat 
+    VERSION 0.2.0
+    DESCRIPTION "Real-time AI pipelines for complex AI communications stacks"
+    LANGUAGES C CXX Python)
+
+# Set C++ standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+# Find Python interpreter and development packages
+find_package(Python 3.9 REQUIRED COMPONENTS Interpreter Development NumPy)
+find_package(pybind11 CONFIG REQUIRED)
+
+# Enhanced Ninja optimization - Pro recursive parallel with 12 threads max
+find_program(NINJA_EXECUTABLE ninja)
+if(NINJA_EXECUTABLE)
+    set(CMAKE_GENERATOR "Ninja" CACHE INTERNAL "" FORCE)
+    message(STATUS "Using Ninja build generator with enhanced parallelism")
+    
+    # Pro recursive parallel optimization
+    set(CMAKE_BUILD_PARALLEL_LEVEL 12 CACHE STRING "Maximum parallel jobs" FORCE)
+    set(CMAKE_JOB_POOL_COMPILE "compile")
+    set(CMAKE_JOB_POOL_LINK "link")
+    set(CMAKE_JOB_POOLS 
+        "compile=${CMAKE_BUILD_PARALLEL_LEVEL}"
+        "link=4") # Limit link jobs for memory usage
+
+    # Ninja file generation optimization
+    set(CMAKE_NINJA_FORCE_RESPONSE_FILE ON) # Use response files for long command lines
+    
+    # Optimize recursion
+    if(DEFINED ENV{NINJA_STATUS})
+    else()
+        set(ENV{NINJA_STATUS} "[%p|%f/%t] %e ")
+    endif()
+endif()
+
+# Enable ccache with enhanced settings for faster rebuilds
+find_program(CCACHE_EXECUTABLE ccache)
+if(CCACHE_EXECUTABLE)
+    set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_EXECUTABLE}")
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_EXECUTABLE}")
+    message(STATUS "Using ccache: ${CCACHE_EXECUTABLE}")
+    # Optimize ccache
+    if(NOT DEFINED ENV{CCACHE_DIR})
+        set(ENV{CCACHE_DIR} "${CMAKE_BINARY_DIR}/.ccache")
+    endif()
+    set(ENV{CCACHE_COMPRESS} "true")
+    set(ENV{CCACHE_COMPRESSLEVEL} "6") # Balance between speed and size
+    set(ENV{CCACHE_MAXSIZE} "5G")
+    set(ENV{CCACHE_SLOPPINESS} "pch_defines,time_macros,include_file_mtime")
+    set(ENV{CCACHE_DIRECT} "true") # Faster performance
+endif()
+
+# Add performance optimization flags - Incredible optimizations
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    add_compile_options(
+        -O3                  # Maximum optimization
+        -march=native        # Optimize for current CPU
+        -mtune=native        # Fine-tune for current CPU
+        -pipe                # Use pipes instead of temp files
+        -ffast-math          # Optimize floating-point math
+        -fomit-frame-pointer # Remove frame pointers when possible
+        -ffunction-sections  # Place each function in its own section
+        -fdata-sections      # Place each data item in its own section
+    )
+    
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+        add_compile_options(
+            -flto=12         # Link-time optimization with 12 threads
+            -fno-fat-lto-objects
+            -fgraphite-identity # Enable graphite loop optimizations
+            -floop-nest-optimize
+            -fdevirtualize-at-ltrans
+            -fno-semantic-interposition # Improved code generation
+        )
+        add_link_options(-flto=12 -Wl,--gc-sections)
+        
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        add_compile_options(
+            -flto=thin        # LLVM thin LTO
+            -fvectorize       # Auto-vectorize loops
+            -fslp-vectorize   # Vectorize straight-line code
+        )
+        add_link_options(-flto=thin -Wl,--gc-sections)
+    endif()
+elseif(MSVC)
+    add_compile_options(
+        /O2         # Maximum optimization
+        /GL         # Whole program optimization
+        /Gy         # Function-level linking
+        /Gw         # Optimize global data
+        /Ob3        # Aggressive inlining
+        /arch:AVX2  # Use AVX2 instructions
+        /fp:fast    # Fast floating point model
+        /Qpar       # Auto-parallelization
+    )
+    add_link_options(/LTCG /OPT:REF /OPT:ICF)
+endif()
+
+# Add OpenMP support with enhanced parallel processing
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+    add_compile_options(${OpenMP_CXX_FLAGS})
+    add_link_options(${OpenMP_CXX_FLAGS})
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    message(STATUS "OpenMP found and enabled with optimized parallel processing")
+endif()
+
+# Optimize PCH with larger precompiled headers for faster compilation
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.16)
+    # Common headers for precompilation - extended list
+    set(PRECOMPILED_HEADERS
+        <vector>
+        <string>
+        <memory>
+        <unordered_map>
+        <algorithm>
+        <functional>
+        <numeric>
+        <utility>
+        <array>
+        <tuple>
+        <chrono>
+        <thread>
+        <mutex>
+        <future>
+        <condition_variable>
+        <atomic>
+        <iostream>
+        <fstream>
+        <sstream>
+        <iomanip>
+        <random>
+        <cmath>
+        <cstring>
+        <cstdint>
+    )
+endif()
+
+# Cache external dependencies with hash verification
+set(CMAKE_FIND_PACKAGE_NO_PACKAGE_REGISTRY ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_POLICY_DEFAULT_CMP0074 NEW) # Use <PKG>_ROOT variables
+
+# Define extension modules directory
+set(EXTENSIONS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/pipecat/extensions")
+
+# Add extension modules
+add_subdirectory(${EXTENSIONS_DIR}/optimized_processing)
+add_subdirectory(${EXTENSIONS_DIR}/audio_processing)
+add_subdirectory(${EXTENSIONS_DIR}/tracebacker)
+
+# Testing with parallel execution
+option(BUILD_TESTING "Build tests" ON)
+if(BUILD_TESTING)
+    enable_testing()
+    add_subdirectory(tests/cpp)
+    
+    # Set parallel test execution
+    include(ProcessorCount)
+    ProcessorCount(PROCESSOR_COUNT)
+    if(PROCESSOR_COUNT EQUAL 0)
+        set(PROCESSOR_COUNT 12)
+    else()
+        if(PROCESSOR_COUNT GREATER 12)
+            set(PROCESSOR_COUNT 12)
+        endif()
+    endif()
+    set(CTEST_PARALLEL_LEVEL ${PROCESSOR_COUNT})
+endif()
+
+# Benchmarking with enhanced tools
+option(BUILD_BENCHMARKS "Build benchmarks" ON)
+if(BUILD_BENCHMARKS)
+    add_subdirectory(benchmarks)
+endif()
+
+# Install targets
+install(
+    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/src/pipecat"
+    DESTINATION "${Python_SITEPACKAGES_DIR}"
+    FILES_MATCHING
+    PATTERN "*.py"
+    PATTERN "__pycache__" EXCLUDE
+    PATTERN "*.egg-info" EXCLUDE
+)
+
+# Print build configuration summary
+message(STATUS "✅ Build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "✅ Python: ${Python_EXECUTABLE}")
+message(STATUS "✅ Python include: ${Python_INCLUDE_DIRS}")
+message(STATUS "✅ Python site packages: ${Python_SITEPACKAGES_DIR}")
+message(STATUS "✅ Compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+message(STATUS "✅ C++ flags: ${CMAKE_CXX_FLAGS}")
+message(STATUS "✅ Build parallelism: ${CMAKE_BUILD_PARALLEL_LEVEL}")
+message(STATUS "✅ Processor count: ${PROCESSOR_COUNT}")

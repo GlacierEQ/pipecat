@@ -1,0 +1,110 @@
+{
+  "buildPresets": [
+    {
+      "cleanFirst": false,
+      "configurePreset": "default",
+      "description": "Build with the default configuration",
+      "displayName": "Default Build",
+      "name": "default",
+      "verbose": true
+    },
+    {
+      "cleanFirst": false,
+      "configurePreset": "release",
+      "description": "Build with the release configuration",
+      "displayName": "Release Build",
+      "name": "release",
+      "verbose": true
+    },
+    {
+      "cleanFirst": false,
+      "configurePreset": "ninja",
+      "description": "Build with the Ninja configuration",
+      "displayName": "Ninja Build",
+      "name": "ninja",
+      "verbose": true
+    }
+  ],
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 15,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install"
+      },
+      "description": "Default build using Ninja generator",
+      "displayName": "Default Config",
+      "errors": {
+        "dev": true
+      },
+      "generator": "Ninja",
+      "name": "default",
+      "warnings": {
+        "dev": false
+      }
+    },
+    {
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install"
+      },
+      "description": "Release build using Ninja generator",
+      "displayName": "Release Config",
+      "errors": {
+        "dev": true
+      },
+      "generator": "Ninja",
+      "name": "release",
+      "warnings": {
+        "dev": false
+      }
+    },
+    {
+      "binaryDir": "${sourceDir}/build_ninja",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install_ninja"
+      },
+      "description": "Build using Ninja generator",
+      "displayName": "Ninja Config",
+      "errors": {
+        "dev": true
+      },
+      "generator": "Ninja",
+      "name": "ninja",
+      "warnings": {
+        "dev": false
+      }
+    }
+  ],
+  "deployPresets": [
+    {
+      "configurePreset": "default",
+      "description": "Deploy with the default configuration",
+      "displayName": "Default Deploy",
+      "name": "default"
+    },
+    {
+      "configurePreset": "ninja",
+      "description": "Deploy with the Ninja configuration",
+      "displayName": "Ninja Deploy",
+      "name": "ninja"
+    }
+  ],
+  "testPresets": [
+    {
+      "configurePreset": "default",
+      "description": "Test with the default configuration",
+      "displayName": "Default Test",
+      "name": "default",
+      "verbose": true
+    }
+  ],
+  "version": 3
+}
